@@ -1,0 +1,27 @@
+{
+  "name": "yael",
+  "version": "1.0.0",
+  "description": "Yet Another Encryption Library (This one is better!)",
+  "main": "yael",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "aes-256-gcm",
+    "easy",
+    "encryption",
+    "encrypt",
+    "decrypt",
+    "crypto"
+  ],
+  "author": "William Hilton <wmhilton@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wmhilton/node-yael"
+  },
+  "bugs": {
+    "url": "https://github.com/wmhilton/node-yael/issues"
+  },
+  "homepage": "https://github.com/wmhilton/node-yael"
+}
