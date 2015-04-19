@@ -2,6 +2,7 @@
 # -- Yet Another Encryption Library
 
 crypto = require 'crypto'
+semver = require 'semver'
 pkg = require './package.json'
 
 ###
@@ -37,6 +38,14 @@ KEY_LENGTH = 32
 ITERATIONS = 1000
 HMAC = 'sha256'
 
+# The digest argument (HMAC) is not available on versions of node older than 0.11.11
+# I find this rather annoying.
+pbkdf2 = (passphrase, salt, ITERATIONS, KEY_LENGTH, HMAC, callback) ->
+  if semver.lt process.version, 'v0.11.11'
+    crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, callback
+  else
+    crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HMAC, callback
+
 module.exports =
   encrypt: (passphrase, plainfile, callback) ->
     return switch arguments.length
@@ -61,7 +70,7 @@ module.exports =
     # Generate a random 96-bit initialization vector
     iv = crypto.randomBytes(IV_LENGTH)
     # Derive an encryption key from the passphrase and salt
-    crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HMAC, (err, key) ->
+    pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HMAC, (err, key) ->
       return callback err if err?
       # Create a symmetric cipher using the key and initialization vector
       cipher = crypto.createCipheriv algorithm, key, iv
@@ -81,7 +90,7 @@ module.exports =
   decryptAsync: (passphrase, cipherObject, callback) ->
     {cipherfile, iv, salt, authtag} = cipherObject
     # Generate an encryption key from the passphrase and salt
-    crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HMAC, (err, key) ->
+    pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HMAC, (err, key) ->
       return callback err if err?
       decipher = crypto.createDecipheriv algorithm, key, iv
       decipher.setAuthTag authtag
