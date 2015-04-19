@@ -2,6 +2,7 @@
 # -- Yet Another Encryption Library
 
 crypto = require 'crypto'
+pkg = require './package.json'
 
 ###
 A brief explanation.
@@ -38,6 +39,23 @@ HMAC = 'sha256'
 
 module.exports =
   encrypt: (passphrase, plainfile, callback) ->
+    return switch arguments.length
+      # Return Writable Stream
+      when 1 then @encryptStream(passphrase)
+      # Return Promise
+      when 2 then @encryptPromise(passphrase, plainfile)
+      # Encrypt then call callback
+      when 3 then @encryptAsync(passphrase, plainfile, callback)
+  decrypt: (passphrase, plainfile, callback) ->
+    return switch arguments.length
+      # Return Writable Stream
+      when 1 then @decryptStream(passphrase)
+      # Return Promise
+      when 2 then @decryptPromise(passphrase, plainfile)
+      # Encrypt then call callback
+      when 3 then @decryptAsync(passphrase, plainfile, callback)
+
+  encryptAsync: (passphrase, plainfile, callback) ->
     # Generate a random passphrase salt
     salt = crypto.randomBytes(SALT_LENGTH)
     # Generate a random 96-bit initialization vector
@@ -59,8 +77,8 @@ module.exports =
           iv: iv
           salt: salt
           authtag: authtag
-          yael: '0.0.1'
-  decrypt: (passphrase, cipherObject, callback) ->
+          yael_version: pkg.version
+  decryptAsync: (passphrase, cipherObject, callback) ->
     {cipherfile, iv, salt, authtag} = cipherObject
     # Generate an encryption key from the passphrase and salt
     crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HMAC, (err, key) ->
@@ -68,22 +86,13 @@ module.exports =
       decipher = crypto.createDecipheriv algorithm, key, iv
       decipher.setAuthTag authtag
       try
-        plainfile = decipher.update cipherfile
-        plainfile += decipher.final()
+        # plainfile = decipher.update cipherfile
+        # plainfile += decipher.final()
+        decipher.end cipherfile, (err) ->
+          return callback err if err?
+          plainfile = decipher.read()
+          callback null, plainfile
       catch err
         if err.message is "Unsupported state or unable to authenticate data"
           return callback new Error "Message Corrupted"
         return callback err if err?
-      callback null, plainfile
-  test: ->
-    module.exports.encrypt "my password", "Hello World!", (err, cipherObject) ->
-      console.log err, cipherObject
-      # cipherObject.cipherfile[0] = 0
-      module.exports.decrypt "my password", cipherObject, (err, plainfile) ->
-        return console.log err if err?
-        console.log plainfile.toString()
-  test2: ->
-    fs.createReadStream('helloworld.txt')
-    .pipe(module.exports.encrypt("my password"))
-    .pipe(module.exports.decrypt("my password"))
-    .pipe(process.stdout)

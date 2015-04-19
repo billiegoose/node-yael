@@ -23,5 +23,9 @@
   "bugs": {
     "url": "https://github.com/wmhilton/node-yael/issues"
   },
-  "homepage": "https://github.com/wmhilton/node-yael"
+  "homepage": "https://github.com/wmhilton/node-yael",
+  "devDependencies": {
+    "chai": "^2.2.0",
+    "mocha": "^2.2.4"
+  }
 }
