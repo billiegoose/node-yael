@@ -29,7 +29,9 @@
     "coffee-script": "^1.9.2",
     "mocha": "^2.2.4"
   },
+  "engines": {
+    "node": ">=0.11.11"
+  },
   "dependencies": {
-    "semver": "^4.3.3"
   }
 }
