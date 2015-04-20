@@ -5,3 +5,12 @@ node_js:
   - "0.12"
   - "0.11"
   - "0.11.11"
+deploy:
+  provider: npm
+  email: wmhilton@gmail.com
+  api_key:
+    secure: hA8sEK1OTQHWRRPtlbA+Atp0S2iuzBAaIoHYJ0fAbrsrAuPVHZQJ5Ltx2nd2jBxBXAUMNtSeoyN2NGf5/AtivjnHnbWXe5G4zxR3t+0mp9SGLq8TEh2NULoaCSSQlRBsDk/6YUOE+kLmhenmKuo+3LIRKpz9enFN2otrrO8Z7HE=
+  on:
+    branch: master
+    tags: true
+    repo: wmhilton/node-yael

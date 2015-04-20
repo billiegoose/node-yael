@@ -1,5 +1,5 @@
 # Yael [![Build Status](https://travis-ci.org/wmhilton/node-yael.svg?branch=develop)](https://travis-ci.org/wmhilton/node-yael) ![Node Version](https://img.shields.io/badge/node-%3Ev0.11.10-lightgrey.svg)
-[![NPM](https://nodei.co/npm/express.png)](https://nodei.co/npm/yael/)
+[![NPM](https://nodei.co/npm/yael.png)](https://nodei.co/npm/yael/)
 
 Yael === Yet Another Encryption Library
 
