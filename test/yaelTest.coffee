@@ -4,7 +4,7 @@ expect = require('chai').expect
 crypto = require 'crypto'
 yael = require '..'
 
-describe 'Module', ->
+describe 'Module API', ->
   it 'should load/exist', ->
     expect(yael).to.exist
   it 'should have encrypt() function', ->
@@ -12,52 +12,94 @@ describe 'Module', ->
   it 'should have decrypt() function', ->
     expect(yael.decrypt).to.be.a('function')
 
-describe 'Encrypt string', ->
+describe 'Encryption tests', ->
+  before ->
+    global.plainbuffer = crypto.randomBytes(1024)
   it 'encrypt "Hello World!"', (done) ->
     yael.encrypt "my password", "Hello World!", (err, cipherObject) ->
       return done err if err?
       expect(cipherObject).to.exist
-      global.cipherObject = cipherObject
+      expect(cipherObject.return_type).to.equal('String')
+      global.cipherString = cipherObject
       done()
-  it 'decrypt "Hello World!"', (done) ->
-    yael.decrypt "my password", cipherObject, (err, plainfile) ->
-      return done err if err?
-      expect(plainfile).to.exist
-      global.plainfile = plainfile
-      done()
-  it 'decrypted output matches input', ->
-    expect(plainfile.toString()).to.equal("Hello World!")
-
-describe 'Encrypt random buffer', ->
-  before ->
-    global.plainbuffer = crypto.randomBytes(1024)
   it 'encrypt buffer', (done) ->
     yael.encrypt "asdf", plainbuffer, (err, cipherObject) ->
       return done err if err?
       expect(cipherObject).to.exist
-      global.cipherObject = cipherObject
+      expect(cipherObject.return_type).to.equal('Buffer')
+      global.cipherBuffer = cipherObject
+      done()
+
+describe 'Decryption tests', ->
+  it 'decrypt "Hello World!"', (done) ->
+    yael.decrypt "my password", cipherString, (err, plainfile) ->
+      return done err if err?
+      expect(plainfile).to.exist
+      global.plainfile = plainfile
       done()
   it 'decrypt buffer', (done) ->
-    yael.decrypt "asdf", cipherObject, (err, plainbuffer2) ->
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
       return done err if err?
       expect(plainbuffer2).to.exist
       global.plainbuffer2 = plainbuffer2
       done()
-  it 'decrypted output matches input', ->
+
+describe 'Correct output', ->
+  it 'decrypted string output matches input', ->
+    expect(plainfile).to.equal("Hello World!")
+  it 'decrypted buffer output matches input', ->
     expect(plainbuffer).to.deep.equal(plainbuffer2)
 
 describe 'Catch authTag (file integrity) error', ->
   before ->
     # Manipulate first byte
-    cf = cipherObject.cipherfile
+    cf = cipherString.cipherfile
     cf[0] = cf[0] ^ cf[1]
-  it 'decrypt buffer', (done) ->
-    yael.decrypt "asdf", cipherObject, (err, plainbuffer2) ->
+    cf = cipherBuffer.cipherfile
+    cf[0] = cf[0] ^ cf[1]
+  it 'decrypt string', (done) ->
+    yael.decrypt "my password", cipherString, (err, plainfile) ->
       expect(err).to.deep.equal(new Error "Message Corrupted")
       done()
+  it 'decrypt buffer', (done) ->
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer) ->
+      expect(err).to.deep.equal(new Error "Message Corrupted")
+      done()
+  after ->
+    # Undo manipulation of first byte
+    cf = cipherString.cipherfile
+    cf[0] = cf[0] ^ cf[1]
+    cf = cipherBuffer.cipherfile
+    cf[0] = cf[0] ^ cf[1]
 
-  # test2: ->
-  #   fs.createReadStream('README.md')
-  #   .pipe(module.exports.encrypt("my password"))
-  #   .pipe(module.exports.decrypt("my password"))
-  #   .pipe(process.stdout)
+describe 'Catch yael_version mismatch error', ->
+  it 'major version change up', (done) ->
+    cipherBuffer.yael_version = 'v2.0.0'
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
+      expect(err).to.deep.equal(new Error "cipherObject cannot be read because cipherObject.yael_version is incompatible with this version of yael")
+      done()
+  it 'major version change down', (done) ->
+    cipherBuffer.yael_version = 'v0.0.0'
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
+      expect(err).to.deep.equal(new Error "cipherObject cannot be read because cipherObject.yael_version is incompatible with this version of yael")
+      done()
+  it 'minor version change up', (done) ->
+    cipherBuffer.yael_version = 'v1.99.0'
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
+      expect(err).to.deep.equal(new Error "cipherObject cannot be read because cipherObject.yael_version indicates the cipherObject was made by a newer version of yael")
+      done()
+  it 'minor version change down', (done) ->
+    cipherBuffer.yael_version = 'v1.0.0'
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
+      expect(err).to.be.null
+      done()
+  it 'patch version change up', (done) ->
+    cipherBuffer.yael_version = 'v1.0.99'
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
+      expect(err).to.be.null
+      done()
+  it 'patch version change down', (done) ->
+    cipherBuffer.yael_version = 'v1.0.0'
+    yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
+      expect(err).to.be.null
+      done()
