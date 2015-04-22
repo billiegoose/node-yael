@@ -1,5 +1,4 @@
 #!/usr/bin/env coffee
-
 expect = require('chai').expect
 crypto = require 'crypto'
 yael = require '..'
@@ -17,31 +16,59 @@ describe 'Encryption tests', ->
     global.plainbuffer = crypto.randomBytes(1024)
   it 'encrypt "Hello World!"', (done) ->
     yael.encrypt "my password", "Hello World!", (err, cipherObject) ->
-      return done err if err?
+      expect(err).to.be.null
       expect(cipherObject).to.exist
       expect(cipherObject.return_type).to.equal('String')
       global.cipherString = cipherObject
       done()
   it 'encrypt buffer', (done) ->
     yael.encrypt "asdf", plainbuffer, (err, cipherObject) ->
-      return done err if err?
+      expect(err).to.be.null
       expect(cipherObject).to.exist
       expect(cipherObject.return_type).to.equal('Buffer')
       global.cipherBuffer = cipherObject
       done()
 
+  it 'encrypt "Hello World!" (Promise)', (done) ->
+    yael.encrypt "my password", "Hello World!"
+    .then (cipherObject) ->
+      expect(cipherObject).to.exist
+      expect(cipherObject.return_type).to.equal('String')
+      global.cipherStringP = cipherObject
+      done()
+  it 'encrypt buffer (Promise)', (done) ->
+    yael.encrypt "asdf", plainbuffer
+    .then (cipherObject) ->
+      expect(cipherObject).to.exist
+      expect(cipherObject.return_type).to.equal('Buffer')
+      global.cipherBufferP = cipherObject
+      done()
+
 describe 'Decryption tests', ->
   it 'decrypt "Hello World!"', (done) ->
     yael.decrypt "my password", cipherString, (err, plainfile) ->
-      return done err if err?
+      expect(err).to.be.null
       expect(plainfile).to.exist
       global.plainfile = plainfile
       done()
   it 'decrypt buffer', (done) ->
     yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
-      return done err if err?
+      expect(err).to.be.null
       expect(plainbuffer2).to.exist
       global.plainbuffer2 = plainbuffer2
+      done()
+
+  it 'decrypt "Hello World!" (Promise)', (done) ->
+    yael.decrypt "my password", cipherStringP
+    .then (plainfile) ->
+      expect(plainfile).to.exist
+      global.plainfileP = plainfile
+      done()
+  it 'decrypt buffer (Promise)', (done) ->
+    yael.decrypt "asdf", cipherBufferP
+    .then (plainbuffer2) ->
+      expect(plainbuffer2).to.exist
+      global.plainbuffer2P = plainbuffer2
       done()
 
 describe 'Correct output', ->
@@ -49,6 +76,11 @@ describe 'Correct output', ->
     expect(plainfile).to.equal("Hello World!")
   it 'decrypted buffer output matches input', ->
     expect(plainbuffer).to.deep.equal(plainbuffer2)
+
+  it 'decrypted string output matches input (Promise)', ->
+    expect(plainfileP).to.equal("Hello World!")
+  it 'decrypted buffer output matches input (Promise)', ->
+    expect(plainbuffer).to.deep.equal(plainbuffer2P)
 
 describe 'Catch authTag (file integrity) error', ->
   before ->
@@ -63,6 +95,11 @@ describe 'Catch authTag (file integrity) error', ->
       done()
   it 'decrypt buffer', (done) ->
     yael.decrypt "asdf", cipherBuffer, (err, plainbuffer) ->
+      expect(err).to.deep.equal(new Error "Message Corrupted")
+      done()
+  it 'decrypt string (Promise)', (done) ->
+    yael.decrypt "my password", cipherString
+    .catch (err) ->
       expect(err).to.deep.equal(new Error "Message Corrupted")
       done()
   after ->
@@ -102,4 +139,10 @@ describe 'Catch yael_version mismatch error', ->
     cipherBuffer.yael_version = 'v1.0.0'
     yael.decrypt "asdf", cipherBuffer, (err, plainbuffer2) ->
       expect(err).to.be.null
+      done()
+  it 'major version change up (Promise)', (done) ->
+    cipherBuffer.yael_version = 'v2.0.0'
+    yael.decrypt "asdf", cipherBuffer
+    .catch (err) ->
+      expect(err).to.deep.equal(new Error "cipherObject cannot be read because cipherObject.yael_version is incompatible with this version of yael")
       done()

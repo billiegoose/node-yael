@@ -38,82 +38,93 @@ KEY_LENGTH = 32
 HASH_ALGORITHM = 'sha256'
 ITERATIONS = 1000
 
-module.exports =
-  encrypt: (passphrase, plainfile, callback) ->
-    return switch arguments.length
-      # Return Writable Stream
-      when 1 then @encryptStream(passphrase)
-      # Return Promise
-      when 2 then @encryptPromise(passphrase, plainfile)
-      # Encrypt then call callback
-      when 3 then @encryptAsync(passphrase, plainfile, callback)
-  decrypt: (passphrase, plainfile, callback) ->
-    return switch arguments.length
-      # Return Writable Stream
-      when 1 then @decryptStream(passphrase)
-      # Return Promise
-      when 2 then @decryptPromise(passphrase, plainfile)
-      # Encrypt then call callback
-      when 3 then @decryptAsync(passphrase, plainfile, callback)
 
-  encryptAsync: (passphrase, plainfile, callback) ->
-    # Generate a random passphrase salt
-    salt = crypto.randomBytes(SALT_LENGTH)
-    # Generate a random 96-bit initialization vector
-    iv = crypto.randomBytes(IV_LENGTH)
-    # Derive an encryption key from the passphrase and salt
-    crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM, (err, key) ->
-      return callback err if err?
-      # Create a symmetric cipher using the key and initialization vector
-      cipher = crypto.createCipheriv CIPHER_ALGORITHM, key, iv
-      # Stream the plainfile into the cipher
-      cipher.end plainfile, (err) ->
-        return callback err if err?
-        # Read the encrypted text out of the cipher
-        cipherfile = cipher.read()
-        authtag = cipher.getAuthTag()
-        # Return an object containing the result
-        callback null,
-          yael_version: pkg.version
-          cipherfile: cipherfile
-          iv: iv
-          salt: salt
-          authtag: authtag
-          return_type: switch
-            when typeof plainfile is 'string' then 'String'
-            when plainfile instanceof Buffer then 'Buffer'
-            else 'undefined'
-          details:
-            CIPHER_ALGORITHM: CIPHER_ALGORITHM
-            SALT_LENGTH: SALT_LENGTH
-            IV_LENGTH: IV_LENGTH
-            KEY_LENGTH: KEY_LENGTH
-            HASH_ALGORITHM: HASH_ALGORITHM
-            ITERATIONS: ITERATIONS
-    return null
-  decryptAsync: (passphrase, cipherObject, callback) ->
-    {yael_version, cipherfile, iv, salt, authtag, return_type} = cipherObject
-    # Assert yael_version is compatible
-    err = incompatibleVersion(yael_version)
+encrypt = (passphrase, plainfile, callback) ->
+  return switch arguments.length
+    # Return Writable Stream
+    when 1 then encryptStream(passphrase)
+    # Return Promise
+    when 2 then encryptPromise(passphrase, plainfile)
+    # Encrypt then call callback
+    when 3 then encryptAsync(passphrase, plainfile, callback)
+decrypt = (passphrase, plainfile, callback) ->
+  return switch arguments.length
+    # Return Writable Stream
+    when 1 then decryptStream(passphrase)
+    # Return Promise
+    when 2 then decryptPromise(passphrase, plainfile)
+    # Encrypt then call callback
+    when 3 then decryptAsync(passphrase, plainfile, callback)
+
+encryptAsync = (passphrase, plainfile, callback) ->
+  # Generate a random passphrase salt
+  salt = crypto.randomBytes(SALT_LENGTH)
+  # Generate a random 96-bit initialization vector
+  iv = crypto.randomBytes(IV_LENGTH)
+  # Derive an encryption key from the passphrase and salt
+  crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM, (err, key) ->
     return callback err if err?
-    # Generate an encryption key from the passphrase and salt
-    crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM, (err, key) ->
+    # Create a symmetric cipher using the key and initialization vector
+    cipher = crypto.createCipheriv CIPHER_ALGORITHM, key, iv
+    # Stream the plainfile into the cipher
+    cipher.end plainfile, (err) ->
       return callback err if err?
-      decipher = crypto.createDecipheriv CIPHER_ALGORITHM, key, iv
-      decipher.setAuthTag authtag
-      try
-        # plainfile = decipher.update cipherfile
-        # plainfile += decipher.final()
-        decipher.end cipherfile, (err) ->
-          return callback err if err?
-          plainfile = decipher.read()
-          plainfile = plainfile.toString() if return_type is 'String'
-          callback null, plainfile
-      catch err
-        if err.message is "Unsupported state or unable to authenticate data"
-          return callback new Error "Message Corrupted"
+      # Read the encrypted text out of the cipher
+      cipherfile = cipher.read()
+      authtag = cipher.getAuthTag()
+      # Return an object containing the result
+      callback null,
+        yael_version: pkg.version
+        cipherfile: cipherfile
+        iv: iv
+        salt: salt
+        authtag: authtag
+        return_type: switch
+          when typeof plainfile is 'string' then 'String'
+          when plainfile instanceof Buffer then 'Buffer'
+          else 'undefined'
+        details:
+          CIPHER_ALGORITHM: CIPHER_ALGORITHM
+          SALT_LENGTH: SALT_LENGTH
+          IV_LENGTH: IV_LENGTH
+          KEY_LENGTH: KEY_LENGTH
+          HASH_ALGORITHM: HASH_ALGORITHM
+          ITERATIONS: ITERATIONS
+  return null
+decryptAsync = (passphrase, cipherObject, callback) ->
+  {yael_version, cipherfile, iv, salt, authtag, return_type} = cipherObject
+  # Assert yael_version is compatible
+  err = incompatibleVersion(yael_version)
+  return callback err if err?
+  # Generate an encryption key from the passphrase and salt
+  crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM, (err, key) ->
+    return callback err if err?
+    decipher = crypto.createDecipheriv CIPHER_ALGORITHM, key, iv
+    decipher.setAuthTag authtag
+    try
+      # plainfile = decipher.update cipherfile
+      # plainfile += decipher.final()
+      decipher.end cipherfile, (err) ->
         return callback err if err?
-    return null
+        plainfile = decipher.read()
+        plainfile = plainfile.toString() if return_type is 'String'
+        callback null, plainfile
+    catch err
+      if err.message is "Unsupported state or unable to authenticate data"
+        return callback new Error "Message Corrupted"
+      return callback err if err?
+  return null
+
+encryptPromise = (passphrase, plaintext) ->
+  return new Promise (resolve, reject) ->
+    encryptAsync passphrase, plaintext, (err, result) ->
+      return reject(err) if err?
+      return resolve(result)
+decryptPromise = (passphrase, cipherObject) ->
+  return new Promise (resolve, reject) ->
+    decryptAsync passphrase, cipherObject, (err, result) ->
+      return reject(err) if err?
+      return resolve(result)
 
 # Patch updates are all compatible
 # Minor updates are capable of reading files by lower version
@@ -129,3 +140,7 @@ incompatibleVersion = (yael_version) ->
   if semver.minor(yael_version) > semver.minor(pkg.version)
     return new Error "cipherObject cannot be read because cipherObject.yael_version indicates the cipherObject was made by a newer version of yael"
   return null
+
+module.exports =
+  encrypt: encrypt
+  decrypt: decrypt
