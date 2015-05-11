@@ -1,16 +1,5 @@
 semver = require 'semver'
-
-
-CIPHER_ALGORITHM = 'aes-256-gcm'
-SALT_LENGTH = 16
-IV_LENGTH = 12
-KEY_LENGTH = 32
-AUTHTAG_LENGTH = 16
-
-HASH_ALGORITHM = 'sha256'
-ITERATIONS = 1000
-
-# TODO: Test entire file
+E = require './constants'
 
 # Convert buffers to base64 strings following the convention in the json-buffer package for lack of a better idea.
 buf2str = (buf, enc='base64') ->
@@ -40,8 +29,8 @@ class CipherObject
       when typeof o is 'string'
         return @fromString o
       when typeof o is 'object'
-        for prop of o
-          this[prop] = o[prop]
+        # Shallow copy
+        @[p] = o[p] for p of o when typeof o[p] isnt 'function'
   # Export as a JSON string
   toString: ->
     JSON.stringify
@@ -83,17 +72,17 @@ class CipherObject
     @return_type = switch return_type.toString()
       when 'S' then 'String'
       when 'B' then 'Buffer'
-    @salt = buf.slice SALT_LENGTH
-    @iv = buf.slice IV_LENGTH
-    @authtag = buf.slice AUTHTAG_LENGTH
+    @salt = buf.slice E.SALT_LENGTH
+    @iv = buf.slice E.IV_LENGTH
+    @authtag = buf.slice E.AUTHTAG_LENGTH
     @cipherfile = buf.slice()
     @details =
-      CIPHER_ALGORITHM: CIPHER_ALGORITHM
-      SALT_LENGTH: SALT_LENGTH
-      IV_LENGTH: IV_LENGTH
-      KEY_LENGTH: KEY_LENGTH
-      HASH_ALGORITHM: HASH_ALGORITHM
-      ITERATIONS: ITERATIONS
+      CIPHER_ALGORITHM: E.CIPHER_ALGORITHM
+      SALT_LENGTH: E.SALT_LENGTH
+      IV_LENGTH: E.IV_LENGTH
+      KEY_LENGTH: E.KEY_LENGTH
+      HASH_ALGORITHM: E.HASH_ALGORITHM
+      ITERATIONS: E.ITERATIONS
 
     return @
 

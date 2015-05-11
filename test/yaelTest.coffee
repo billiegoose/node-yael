@@ -168,12 +168,31 @@ describe 'Test export formats', ->
     expect(bufOb).to.be.an.instanceof(Buffer)
 
   it 'fromString', ->
-    o = new yael.CipherObject strOb
-    expect(o).to.exist
-    expect(JSON.stringify o).to.equal(JSON.stringify(cipOb))
+    a = new yael.CipherObject strOb
+    b = new yael.CipherObject
+    b.fromString strOb
+    expect(a,b).to.exist
+    expect(a).to.deep.equal(cipOb).to.deep.equal(b)
 
   it 'fromBuffer', ->
-    o = new yael.CipherObject bufOb
-    expect(o).to.exist
-    s = o.toString()
-    expect(o.toString()).to.equal(strOb)
+    a = new yael.CipherObject bufOb
+    b = new yael.CipherObject
+    b.fromBuffer bufOb
+    expect(a,b).to.exist
+    expect(a).to.deep.equal(cipOb).to.deep.equal(b)
+
+  it 'from object', ->
+    o1 = new yael.CipherObject cipOb
+    expect(o1).to.not.equal(cipOb)
+    expect(o1).to.deep.equal(cipOb)
+
+  it 'repeated serialization', ->
+    o1 = new yael.CipherObject cipOb.toString()
+    o2 = new yael.CipherObject o1.toBuffer()
+    o3 = new yael.CipherObject o2.toBuffer()
+    o4 = new yael.CipherObject o3.toString()
+    expect(cipOb)
+    .to.deep.equal(o1)
+    .to.deep.equal(o2)
+    .to.deep.equal(o3)
+    .to.deep.equal(o4)
