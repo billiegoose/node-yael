@@ -1,4 +1,3 @@
-#!/usr/bin/env coffee
 # Yet Another Encryption Library
 
     crypto = require 'crypto'
@@ -8,7 +7,6 @@
 I'm trying to keep dependencies to a minimum. Semver is used to do backwards-compatibility checks though.
 
 ## Settings
-
 
     CIPHER_ALGORITHM = 'aes-256-gcm'
 
@@ -20,9 +18,8 @@ seems to be the goto standard for symmetric encryption.
 crypto library lists on my computer. As larger key sizes become the norm, I'm sure the key size will increase.
 * Why GCM? Earlier AES block cipher modes provide confidentiality, but do not ensure file integrity.
 Those AES modes must be combined with another algorithm to ensure that the file hasn't been tampered with or
-accidentally corrupted. AES-GCB is the only AES algorithm at the time of writing that combines file decryption
+accidentally corrupted. AES-GCM is the only AES algorithm at the time of writing that combines file decryption
 and verification.
-
 
     SALT_LENGTH = 16
     IV_LENGTH = 12
@@ -30,7 +27,6 @@ and verification.
 
 These are the cipher settings. Note: AES-256-GCM is very picky about these numbers. Took me a while to get them right.
 It just... doesn't work with different numbers. OpenSSL's fault I think. It took some Googling.
-
 
     HASH_ALGORITHM = 'sha256'
     ITERATIONS = 1000
@@ -40,17 +36,6 @@ SHA-256 seems standard. 1000 iterations seemed reasonable, but now that I'm read
 you want enough iterations so that for a given password+salt combination, it takes at least 8ms to compute the key.
 Since this library is intended for one-off encryptions, not encrypting hundreds of messages per second, it might be
 wise to increase the number greatly. I could even build in a year factor to account for Moore's Law.
-
-Terminology:
-- *passphrase*:
-  This is a password that YOU the user chooses. I would still recommend generating it randomly. Make it big.
-  This is the ONLY thing that needs to be kept secret. The key, salt, iv etc can all be visible publicly, and should be
-  saved and sent along with the encrypted message.
-- *plainfile*:
-  This is the input to the `encrypt` function / output of the `decrypt` function.
-- *cipherObject*:
-  This is the output of the `encrypt` function / input to the `decrypt` function.
-
 
     encrypt = (passphrase, plainfile, callback) ->
       return switch arguments.length
@@ -70,36 +55,39 @@ Terminology:
         when 3 then decryptAsync(passphrase, cipherObject, callback)
 
 The `encrypt` and `decrypt` functions are actually just wrappers for different ways to interact with the library.
-- Passing in all 3 parameters results in typical Node-callback behavior.
+- Passing in all 3 parameters results in typical Node callback behavior.
 - Passing in 2 parameters but no callback returns a Promise.
 - Passing in just 1 parameter returns a stream.
 
 ## Async Encrypt/Decrypt
 
-
     encryptAsync = (passphrase, plainfile, callback) ->
       # Generate a random passphrase salt
       salt = crypto.randomBytes(SALT_LENGTH)
 
-`encryptAsync` is the meaty part that really utilizes the crypto library. Some explanation is probably called for.
-This encryption is symmetric, meaning the same password is used to encrypt as to decrypt. This is probably what
-most people want.
+### Arguments:
+- *passphrase* (String):
+  This is a password that YOU the user chooses. I would still recommend generating it randomly. Make it big.
+  This is the ONLY thing that needs to be kept secret. The key, salt, iv etc can all be visible publicly, and should be
+  saved and sent along with the encrypted message.
+- *plainfile* (String or Buffer):
+  This is the input to the `encrypt` function / output of the `decrypt` function.
+- *cipherObject* (Object):
+  This is the output of the `encrypt` function / input to the `decrypt` function.
 
+## Derive an encryption key from the passphrase and salt
 
-      # Derive an encryption key from the passphrase and salt
       crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM, (err, key) ->
         return callback err if err?
 
-Passwords stopped being useful by themselves a long time ago. They are just too short.
-So nowadays encryption is done using "keys". That key is generated from a password using a key derivation function.
-However, most people choose easy-to-guess passwords. This makes the encrypted file vulnerable to "dictionary"
-attacks where the attacker just tries every password in an enormous list of commonly used passwords.
+Passwords stopped being useful by themselves a long time ago. They are just too short. So nowadays encryption is done
+using "keys". That key is generated from a password using a key derivation function. However, most people choose
+easy-to-guess passwords. This makes the encrypted file vulnerable to "dictionary" attacks where the attacker just tries
+every password in an enormous list of commonly used passwords. To mitigate this, it must take long enough to derive
+a key from a password that it is infeasible for the attacker to try every possible password. The amount of time it
+takes to derive a key is controlled by the `ITERATIONS` parameter.
 
-To mitigate this, it must take long enough to derive a key from a password that it is infeasible for the attacker to
-try every possible password. The amount of time it takes to derive a key is controlled by the `ITERATIONS` parameter.
-
-As an added layer of security, in case the attacker has precomputed the resulting keys for every word in their
-dictionary and made a "rainbow table", instead of using the raw password to derive the key, a random string is
+As an added layer of security, instead of reusing the raw password to derive the key, a random string is
 combined with the password to ensure it is not in any existing dictionary attack table. That random string is called
 a `salt`.
 
@@ -107,7 +95,6 @@ a `salt`.
 applies the `HASH_ALGORITHM` an `ITERATIONS` number of times to generate a key of `KEY_LENGTH`.
 This key is NOT saved, but can be recreated by someone who knows the passphrase, the salt, the key length, the
 hash algorithm and number of iterations to use.
-
 
         # Generate a random 96-bit initialization vector
         iv = crypto.randomBytes(IV_LENGTH)
@@ -118,7 +105,6 @@ The actual `CIPHER_ALGORITHM` is a block cipher, meaning it breaks the file into
 block *using the results of the previous block*. How does it encrypt the first block then? That's what the
 initialization vector is for. If it was the same every time, (say all zeros) that could potentially be exploited,
 so instead it is generated as random bytes (so it is different EVERY time) and saved just like the salt is.
-
 
         # Stream the plainfile into the cipher
         cipher.end plainfile, (err) ->
@@ -132,7 +118,6 @@ so instead it is generated as random bytes (so it is different EVERY time) and s
 
 The npm package version doubles as the CipherObject format / export file format version.
 
-
             cipherfile: cipherfile
             iv: iv
             salt: salt
@@ -141,7 +126,6 @@ The npm package version doubles as the CipherObject format / export file format 
 The cipherfile is the encrypted data. The salt and iv are needed to decrypt the cipherfile.
 The authtag provides file integrity verification to detect file corruption.
 
-
             return_type: switch
               when typeof plainfile is 'string' then 'String'
               when plainfile instanceof Buffer then 'Buffer'
@@ -149,7 +133,6 @@ The authtag provides file integrity verification to detect file corruption.
 
 Strings get automatically converted to buffers by the cipher, so we save the type information in `return_type`.
 That way if plainfile was a string, decrypt can know to return a string instead of a buffer.
-
 
             details:
               CIPHER_ALGORITHM: CIPHER_ALGORITHM
@@ -164,7 +147,6 @@ We output all these details for convenience. However, these details are redundan
 
       # Return null because it's asynchronous
       return null
-
 
 The decryption function is pretty much just the reverse of the encryption function. The only difference is we
 check that the yael_version in the CipherObject is compatible with this version of YAEL.
@@ -192,11 +174,9 @@ check that the yael_version in the CipherObject is compatible with this version 
           return callback err if err?
       return null
 
-
 ## Promises
 
 Some wrappers that promisify encryptAsync and decryptAsync:
-
 
     encryptPromise = (passphrase, plaintext) ->
       return new Promise (resolve, reject) ->
@@ -216,7 +196,6 @@ Some wrappers that promisify encryptAsync and decryptAsync:
 - Minor updates are capable of reading files generated by older versions
 - Major updates are incompatible with previous versions
 
-
     incompatibleVersion = (yael_version) ->
       # Assert yael_version is OK
       if not semver.valid(yael_version)?
@@ -228,7 +207,6 @@ Some wrappers that promisify encryptAsync and decryptAsync:
       if semver.minor(yael_version) > semver.minor(pkg.version)
         return new Error "cipherObject cannot be read because cipherObject.yael_version indicates the cipherObject was made by a newer version of yael"
       return null
-
 
 Finally, we expose the following functions as the official API:
 
