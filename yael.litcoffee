@@ -3,6 +3,7 @@
     crypto = require 'crypto'
     semver = require 'semver'
     pkg = require './package.json'
+    CipherObject = require './CipherObject'
 
 I'm trying to keep dependencies to a minimum. Semver is used to do backwards-compatibility checks though.
 
@@ -112,8 +113,8 @@ so instead it is generated as random bytes (so it is different EVERY time) and s
           # Read the encrypted text out of the cipher
           cipherfile = cipher.read()
           authtag = cipher.getAuthTag()
-          # Return an object containing the result
-          callback null,
+          # Create cipherObject result
+          result = new CipherObject
             yael_version: pkg.version
 
 The npm package version doubles as the CipherObject format / export file format version.
@@ -144,6 +145,9 @@ That way if plainfile was a string, decrypt can know to return a string instead 
 
 We output all these details for convenience. However, these details are redundant since we also store the yael_version.
 (Because if you know which version of yael did the encryption, you know exactly what scheme was used.)
+
+          # Return an object containing the result
+          callback null, result
 
       # Return null because it's asynchronous
       return null
@@ -213,3 +217,4 @@ Finally, we expose the following functions as the official API:
     module.exports =
       encrypt: encrypt
       decrypt: decrypt
+      CipherObject: CipherObject

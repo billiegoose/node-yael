@@ -146,3 +146,34 @@ describe 'Catch yael_version mismatch error', ->
     .catch (err) ->
       expect(err).to.deep.equal(new Error "cipherObject cannot be read because cipherObject.yael_version is incompatible with this version of yael")
       done()
+
+describe 'Test export formats', ->
+  cipOb = null
+  strOb = null
+  bufOb = null
+  before (done) ->
+    yael.encrypt "123", "Supercalifragilisticexpialidocious", (err, cipherObject) ->
+      cipOb = cipherObject
+      done()
+
+  it 'toString', ->
+    strOb = cipOb.toString()
+    expect(strOb).to.exist
+    expect(strOb).to.be.a('string')
+    expect(JSON.parse(strOb)).to.be.an('object') # to not crash
+
+  it 'toBuffer', ->
+    bufOb = cipOb.toBuffer()
+    expect(bufOb).to.exist
+    expect(bufOb).to.be.an.instanceof(Buffer)
+
+  it 'fromString', ->
+    o = new yael.CipherObject strOb
+    expect(o).to.exist
+    expect(JSON.stringify o).to.equal(JSON.stringify(cipOb))
+
+  it 'fromBuffer', ->
+    o = new yael.CipherObject bufOb
+    expect(o).to.exist
+    s = o.toString()
+    expect(o.toString()).to.equal(strOb)

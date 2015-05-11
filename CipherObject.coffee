@@ -1,7 +1,18 @@
 semver = require 'semver'
 
+
+CIPHER_ALGORITHM = 'aes-256-gcm'
+SALT_LENGTH = 16
+IV_LENGTH = 12
+KEY_LENGTH = 32
+AUTHTAG_LENGTH = 16
+
+HASH_ALGORITHM = 'sha256'
+ITERATIONS = 1000
+
 # TODO: Test entire file
 
+# Convert buffers to base64 strings following the convention in the json-buffer package for lack of a better idea.
 buf2str = (buf, enc='base64') ->
   if not Buffer.isEncoding(enc) then throw new Error "CipherObject: buf2str Buffer.isEncoding('#{enc}') returned false."
   return ":#{enc}:#{buf.toString(enc)}"
@@ -13,61 +24,25 @@ str2buf = (str) ->
   str = str[m[0].length...]
   return new Buffer(str, enc)
 
+# Pretend buffers are sequential access instead of random access.
 class BufSlicer
-  constructor: (@buf, @beg = 0, @end = 0)
+  constructor: (@buf, @beg = 0, @end = 0) ->
   slice: (len) ->
     @beg = @end
     @end = if len? then @end + len else @buf.length
     return @buf[@beg...@end]
 
 class CipherObject
-  # Reserve properties
-  yael_version: null
-  cipherfile: null
-  iv: null
-  salt: null
-  authtag: null
-  return_type: 'undefined'
-  details: null
   constructor: (o) ->
-    console.log 'Construct CipherObject'
     switch
-      when typeof o is 'object'
-        console.log 'Hmmm.... what should this be. Options?'
-      when typeof o is 'string'
-        try json = JSON.parse(o)
-        catch
-          throw new Error "new CipherObject(String): Invalid JSON"
-        json.cipherfile = str2buf json.cipherfile
-        json.iv         = str2buf json.iv
-        json.salt       = str2buf json.salt
-        json.authtag    = str2buf json.authtag
-        return json
       when o instanceof Buffer
-        json = {}
-        buf = new BufSlicer(o)
-        [major, minor, patch] = buf.slice 3
-        json.yael_version = major + '.' + minor + '.' + patch
-        # TODO: Compare version number against package version. If older, use older parser.
-        return_type = buf.slice 1
-        json.return_type = switch return_type
-          when 'S' then 'String'
-          when 'B' then 'Buffer'
-        SALT_LENGTH = 16
-        IV_LENGTH = 12
-        KEY_LENGTH = 32
-        json =
-          yael_version: yael_version
-          return_type:  return_type
-        json.salt = buf.slice SALT_LENGTH
-        json.iv = buf.slice IV_LENGTH
-        json.authtag = buf.slice AUTHTAG_LENGTH
-        json.cipherfile = buf.slice()
-        return json
-      else
-        return {}
-  # Convert buffers to base64 strings
-  # (following convention in json-buffer package for lack of better ideas)
+        return @fromBuffer o
+      when typeof o is 'string'
+        return @fromString o
+      when typeof o is 'object'
+        for prop of o
+          this[prop] = o[prop]
+  # Export as a JSON string
   toString: ->
     JSON.stringify
       yael_version: @yael_version
@@ -76,17 +51,50 @@ class CipherObject
       salt:         buf2str @salt
       authtag:      buf2str @authtag
       return_type:  @return_type
-      details:      details
+      details:      @details
+  fromString: (o) ->
+    try json = JSON.parse(o)
+    catch
+      throw new Error "CipherObject.fromString: Invalid JSON"
+    this[p] = json[p] for p of json
+    @cipherfile = str2buf @cipherfile
+    @iv         = str2buf @iv
+    @salt       = str2buf @salt
+    @authtag    = str2buf @authtag
+    return this
   # Export an unreadable binary blob of goo
   toBuffer: ->
-    v = semver.parse(@ael_version)
+    v = semver.parse(@yael_version)
     t = @return_type[0]
     Buffer.concat [
       new Buffer([v.major,v.minor,v.patch])
-      new Buffer([t])
-      cipherObject.salt
-      cipherObject.iv
-      cipherObject.authtag
-      cipherObject.cipherfile
+      new Buffer(t)
+      @salt
+      @iv
+      @authtag
+      @cipherfile
     ]
+  fromBuffer: (o) ->
+    buf = new BufSlicer(o)
+    [major, minor, patch] = buf.slice 3
+    @yael_version = major + '.' + minor + '.' + patch
+    # TODO: Compare version number against package version. If older, use older parser.
+    return_type = buf.slice 1
+    @return_type = switch return_type.toString()
+      when 'S' then 'String'
+      when 'B' then 'Buffer'
+    @salt = buf.slice SALT_LENGTH
+    @iv = buf.slice IV_LENGTH
+    @authtag = buf.slice AUTHTAG_LENGTH
+    @cipherfile = buf.slice()
+    @details =
+      CIPHER_ALGORITHM: CIPHER_ALGORITHM
+      SALT_LENGTH: SALT_LENGTH
+      IV_LENGTH: IV_LENGTH
+      KEY_LENGTH: KEY_LENGTH
+      HASH_ALGORITHM: HASH_ALGORITHM
+      ITERATIONS: ITERATIONS
+
+    return @
+
 module.exports = CipherObject
