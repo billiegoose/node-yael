@@ -3,39 +3,10 @@
     crypto = require 'crypto'
     semver = require 'semver'
     pkg = require './package.json'
+    CipherObject = require './CipherObject'
+    E = require './constants'
 
 I'm trying to keep dependencies to a minimum. Semver is used to do backwards-compatibility checks though.
-
-## Settings
-
-    CIPHER_ALGORITHM = 'aes-256-gcm'
-
-After doing some research, I decided the encryption cipher that was the best choice for this project at the time
-of writing was AES-256-GCM.
-* Why AES? Well, it apparently is still state-of-the-art. Maybe the NSA can break it, but it
-seems to be the goto standard for symmetric encryption.
-* Why 256? Because that's the largest key size that Node's
-crypto library lists on my computer. As larger key sizes become the norm, I'm sure the key size will increase.
-* Why GCM? Earlier AES block cipher modes provide confidentiality, but do not ensure file integrity.
-Those AES modes must be combined with another algorithm to ensure that the file hasn't been tampered with or
-accidentally corrupted. AES-GCM is the only AES algorithm at the time of writing that combines file decryption
-and verification.
-
-    SALT_LENGTH = 16
-    IV_LENGTH = 12
-    KEY_LENGTH = 32
-
-These are the cipher settings. Note: AES-256-GCM is very picky about these numbers. Took me a while to get them right.
-It just... doesn't work with different numbers. OpenSSL's fault I think. It took some Googling.
-
-    HASH_ALGORITHM = 'sha256'
-    ITERATIONS = 1000
-
-These are settings for the key derivation function. These are independent of the cipher, and could be different.
-SHA-256 seems standard. 1000 iterations seemed reasonable, but now that I'm reading up on it, a rule of thumb is
-you want enough iterations so that for a given password+salt combination, it takes at least 8ms to compute the key.
-Since this library is intended for one-off encryptions, not encrypting hundreds of messages per second, it might be
-wise to increase the number greatly. I could even build in a year factor to account for Moore's Law.
 
     encrypt = (passphrase, plainfile, callback) ->
       return switch arguments.length
@@ -63,7 +34,7 @@ The `encrypt` and `decrypt` functions are actually just wrappers for different w
 
     encryptAsync = (passphrase, plainfile, callback) ->
       # Generate a random passphrase salt
-      salt = crypto.randomBytes(SALT_LENGTH)
+      salt = crypto.randomBytes(E.SALT_LENGTH)
 
 ### Arguments:
 - *passphrase* (String):
@@ -77,7 +48,7 @@ The `encrypt` and `decrypt` functions are actually just wrappers for different w
 
 ## Derive an encryption key from the passphrase and salt
 
-      crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM, (err, key) ->
+      crypto.pbkdf2 passphrase, salt, E.ITERATIONS, E.KEY_LENGTH, E.HASH_ALGORITHM, (err, key) ->
         return callback err if err?
 
 Passwords stopped being useful by themselves a long time ago. They are just too short. So nowadays encryption is done
@@ -97,9 +68,9 @@ This key is NOT saved, but can be recreated by someone who knows the passphrase,
 hash algorithm and number of iterations to use.
 
         # Generate a random 96-bit initialization vector
-        iv = crypto.randomBytes(IV_LENGTH)
+        iv = crypto.randomBytes(E.IV_LENGTH)
         # Create a symmetric cipher using the key and initialization vector
-        cipher = crypto.createCipheriv CIPHER_ALGORITHM, key, iv
+        cipher = crypto.createCipheriv E.CIPHER_ALGORITHM, key, iv
 
 The actual `CIPHER_ALGORITHM` is a block cipher, meaning it breaks the file into blocks of equal size and encrypts each
 block *using the results of the previous block*. How does it encrypt the first block then? That's what the
@@ -112,8 +83,8 @@ so instead it is generated as random bytes (so it is different EVERY time) and s
           # Read the encrypted text out of the cipher
           cipherfile = cipher.read()
           authtag = cipher.getAuthTag()
-          # Return an object containing the result
-          callback null,
+          # Create cipherObject result
+          result = new CipherObject
             yael_version: pkg.version
 
 The npm package version doubles as the CipherObject format / export file format version.
@@ -135,15 +106,18 @@ Strings get automatically converted to buffers by the cipher, so we save the typ
 That way if plainfile was a string, decrypt can know to return a string instead of a buffer.
 
             details:
-              CIPHER_ALGORITHM: CIPHER_ALGORITHM
-              SALT_LENGTH: SALT_LENGTH
-              IV_LENGTH: IV_LENGTH
-              KEY_LENGTH: KEY_LENGTH
-              HASH_ALGORITHM: HASH_ALGORITHM
-              ITERATIONS: ITERATIONS
+              CIPHER_ALGORITHM: E.CIPHER_ALGORITHM
+              SALT_LENGTH: E.SALT_LENGTH
+              IV_LENGTH: E.IV_LENGTH
+              KEY_LENGTH: E.KEY_LENGTH
+              HASH_ALGORITHM: E.HASH_ALGORITHM
+              ITERATIONS: E.ITERATIONS
 
 We output all these details for convenience. However, these details are redundant since we also store the yael_version.
 (Because if you know which version of yael did the encryption, you know exactly what scheme was used.)
+
+          # Return an object containing the result
+          callback null, result
 
       # Return null because it's asynchronous
       return null
@@ -157,9 +131,9 @@ check that the yael_version in the CipherObject is compatible with this version 
       err = incompatibleVersion(yael_version)
       return callback err if err?
       # Generate an encryption key from the passphrase and salt
-      crypto.pbkdf2 passphrase, salt, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM, (err, key) ->
+      crypto.pbkdf2 passphrase, salt, E.ITERATIONS, E.KEY_LENGTH, E.HASH_ALGORITHM, (err, key) ->
         return callback err if err?
-        decipher = crypto.createDecipheriv CIPHER_ALGORITHM, key, iv
+        decipher = crypto.createDecipheriv E.CIPHER_ALGORITHM, key, iv
         decipher.setAuthTag authtag
         try
           decipher.end cipherfile, (err) ->
@@ -213,3 +187,4 @@ Finally, we expose the following functions as the official API:
     module.exports =
       encrypt: encrypt
       decrypt: decrypt
+      CipherObject: CipherObject
