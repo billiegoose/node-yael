@@ -1,11 +1,11 @@
 {
   "name": "yael",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Yet Another Encryption Library (This one is better!)",
   "main": "yael",
   "scripts": {
     "test": "./node_modules/.bin/mocha",
-    "prepublish": "./node_modules/.bin/coffee -c yael.coffee"
+    "prepublish": "./node_modules/.bin/coffee -c *coffee"
   },
   "keywords": [
     "aes-256-gcm",
