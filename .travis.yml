@@ -7,7 +7,7 @@ deploy:
   provider: npm
   email: wmhilton@gmail.com
   api_key:
-    secure: hA8sEK1OTQHWRRPtlbA+Atp0S2iuzBAaIoHYJ0fAbrsrAuPVHZQJ5Ltx2nd2jBxBXAUMNtSeoyN2NGf5/AtivjnHnbWXe5G4zxR3t+0mp9SGLq8TEh2NULoaCSSQlRBsDk/6YUOE+kLmhenmKuo+3LIRKpz9enFN2otrrO8Z7HE=
+    secure: kScz184h6eOtcwL/jQ0X+3abJqc2L9sh1mvBDvlRXWafJbvJAEUrtTiSSbT/AWXFFLkAmQjkkncCmMU6CHv99tch2wtkpRlbWBkkoTI0lul7/SsJ5GMrpe8yRo9XG3k9W2+g7CzIeAXFZDSaov2nqgXCogKfq9iI8Q44d1UowQ8=
   on:
     branch: master
     tags: true
