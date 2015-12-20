@@ -4,7 +4,7 @@
   "description": "Yet Another Encryption Library (This one is better!)",
   "main": "yael",
   "scripts": {
-    "test": "./node_modules/.bin/mocha",
+    "test": "./node_modules/.bin/mocha && cat ./coverage/coverage-coffee.json | ./node_modules/codecov.io/bin/codecov.io.js",
     "prepublish": "./node_modules/.bin/coffee -c *coffee"
   },
   "keywords": [
@@ -27,7 +27,10 @@
   "homepage": "https://github.com/wmhilton/node-yael",
   "devDependencies": {
     "chai": "^2.2.0",
+    "codecov.io": "^0.1.6",
+    "coffee-coverage": "^0.7.0",
     "coffee-script": "^1.9.2",
+    "istanbul": "^0.4.1",
     "mocha": "^2.2.4"
   },
   "engines": {
