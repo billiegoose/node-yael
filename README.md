@@ -1,4 +1,12 @@
-# Yael [![Build Status](https://travis-ci.org/wmhilton/node-yael.svg)](https://travis-ci.org/wmhilton/node-yael) ![Node Version](https://img.shields.io/badge/node-%3Ev0.11.10-lightgrey.svg)
+# Yael
+
+[![NPM version][npm-version-badge]][npm]
+[![NPM downloads][npm-downloads-badge]][npm]
+[![Build Status][travis-badge]][travis]
+[![Code Coverage][codecov-badge]][codecov]
+[![Dependency Status][depstat-badge]][depstat]
+[![Dev Dependency Status][devdepstat-badge]][devdepstat] 
+
 [![NPM](https://nodei.co/npm/yael.png)](https://nodei.co/npm/yael/)
 
 Yael === Yet Another Encryption Library
@@ -93,3 +101,18 @@ Deserializes a cipher object thats been serialized.
   - `KEY_LENGTH`: Number
   - `HASH_ALGORITHM`: String
   - `ITERATIONS`: Number
+  
+
+<!-- Badge Links -->
+[npm-version-badge]: https://img.shields.io/npm/v/yael.svg
+[npm-downloads-badge]: https://img.shields.io/npm/dt/yael.svg
+[travis-badge]: https://img.shields.io/travis/wmhilton/node-yael/master.svg
+[codecov-badge]: https://img.shields.io/codecov/c/github/wmhilton/node-yael/master.svg
+[depstat-badge]: https://img.shields.io/david/wmhilton/node-yael/master.svg 
+[devdepstat-badge]: https://img.shields.io/david/dev/wmhilton/node-yael/master.svg
+
+[npm]: https://npmjs.org/package/yael
+[travis]: https://travis-ci.org/wmhilton/node-yael
+[codecov]: https://codecov.io/github/wmhilton/node-yael?branch=master
+[depstat]: https://david-dm.org/wmhilton/node-yael
+[devdepstat]: https://david-dm.org/wmhilton/node-yael#info=devDependencies 

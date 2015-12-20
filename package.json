@@ -1,10 +1,12 @@
 {
   "name": "yael",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Yet Another Encryption Library (This one is better!)",
   "main": "yael",
   "scripts": {
-    "test": "./node_modules/.bin/mocha",
+    "pretest": "rm -f *.js",
+    "test": "./node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha -- -R spec",
+    "posttest": "cat ./coverage/coverage.json | ./node_modules/codecov.io/bin/codecov.io.js",
     "prepublish": "./node_modules/.bin/coffee -c ./"
   },
   "keywords": [
@@ -26,14 +28,17 @@
   },
   "homepage": "https://github.com/wmhilton/node-yael",
   "devDependencies": {
-    "chai": "^2.2.0",
+    "chai": "^3.4.1",
+    "codecov.io": "^0.1.6",
+    "coffee-coverage": "^0.7.0",
     "coffee-script": "^1.9.2",
+    "istanbul": "^0.4.1",
     "mocha": "^2.2.4"
   },
   "engines": {
     "node": ">=0.11.11"
   },
   "dependencies": {
-    "semver": "^4.3.3"
+    "semver": "^5.1.0"
   }
 }
