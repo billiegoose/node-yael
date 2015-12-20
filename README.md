@@ -79,7 +79,7 @@ Deserializes a cipher object thats been serialized.
 <!-- Badge Links -->
 [npm-version-badge]: https://img.shields.io/npm/v/yael.svg
 [npm-downloads-badge]: https://img.shields.io/npm/dt/yael.svg
-[travis-badge]: https://img.shields.io/wmhilton/node-yael/master.svg
+[travis-badge]: https://img.shields.io/travis/wmhilton/node-yael/master.svg
 [codecov-badge]: https://img.shields.io/codecov/c/github/wmhilton/node-yael/master.svg
 [depstat-badge]: https://img.shields.io/david/wmhilton/node-yael/master.svg 
 [devdepstat-badge]: https://img.shields.io/david/dev/wmhilton/node-yael/master.svg
