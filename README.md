@@ -20,7 +20,8 @@ An encryption/decryption library should:
 * Support common Node.js interface paradigms like:
   * [Callbacks](http://thenodeway.io/posts/understanding-error-first-callbacks/)
   * [Streams](https://nodejs.org/api/stream.html) (planned)
-  * [Promises](https://www.npmjs.com/package/bluebird) (planned)
+  * [Promises](https://www.npmjs.com/package/bluebird)
+  * Synchronous variations
 * Have as few dependencies as possible.
 * Have well-documented source code that you can read and audit yourself.
 
@@ -40,6 +41,18 @@ Arguments:
 
 Returns: `null`
 
+### yael.encrypt( *passphrase*, *plainfile*)
+Arguments:
+* `passphrase`: String. A secret password used to encrypt the plainfile.
+* `plainfile`: String or Buffer. Either a string or buffer whose contents will be encrypted using the passphrase.
+Returns: `Promise( CipherObject )`
+
+### yael.encryptSync( *passphrase*, *plainfile*)
+Arguments:
+* `passphrase`: String. A secret password used to encrypt the plainfile.
+* `plainfile`: String or Buffer. Either a string or buffer whose contents will be encrypted using the passphrase.
+Returns: `CipherObject`
+
 ### yael.decrypt( *passphrase*, *cipherObject*, *callback* )
 Arguments:
 * `passphrase`: String. A secret password used to encrypt the plainfile.
@@ -47,6 +60,20 @@ Arguments:
 * `callback`: Function( Error, String|Buffer ). Error-first callback that gets called with the decrypted result.
 
 Returns: `null`
+
+### yael.decrypt( *passphrase*, *cipherObject* )
+Arguments:
+* `passphrase`: String. A secret password used to encrypt the plainfile.
+* `cipherObject`: CipherObject. The encrypted content.
+
+Returns: `Promise( String|Buffer )`
+
+### yael.decryptSync( *passphrase*, *cipherObject* )
+Arguments:
+* `passphrase`: String. A secret password used to encrypt the plainfile.
+* `cipherObject`: CipherObject. The encrypted content.
+
+Returns: `String|Buffer`
 
 ## yael.CipherObject
 

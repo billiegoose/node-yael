@@ -163,6 +163,52 @@ Some wrappers that promisify encryptAsync and decryptAsync:
           return reject(err) if err?
           return resolve(result)
 
+## Syncronous Encrypt/Decrypt
+
+    encryptSync = (passphrase, plainfile) ->
+      return_type = switch
+        when typeof plainfile is 'string' then 'String'
+        when plainfile instanceof Buffer then 'Buffer'
+        else 'undefined'
+      if return_type is 'String'
+        plainfile = new Buffer(plainfile, 'utf8')
+      salt = crypto.randomBytes(E.SALT_LENGTH)
+      key = crypto.pbkdf2Sync passphrase, salt, E.ITERATIONS, E.KEY_LENGTH, E.HASH_ALGORITHM
+      iv = crypto.randomBytes(E.IV_LENGTH)
+      cipher = crypto.createCipheriv E.CIPHER_ALGORITHM, key, iv
+      cipherfile = Buffer.concat [cipher.update(plainfile), cipher.final()]
+      authtag = cipher.getAuthTag()
+      result = new CipherObject
+        yael_version: pkg.version
+        cipherfile: cipherfile
+        iv: iv
+        salt: salt
+        authtag: authtag
+        return_type: return_type
+        details:
+          CIPHER_ALGORITHM: E.CIPHER_ALGORITHM
+          SALT_LENGTH: E.SALT_LENGTH
+          IV_LENGTH: E.IV_LENGTH
+          KEY_LENGTH: E.KEY_LENGTH
+          HASH_ALGORITHM: E.HASH_ALGORITHM
+          ITERATIONS: E.ITERATIONS
+      return result
+
+    decryptSync = (passphrase, cipherObject) ->
+      {yael_version, cipherfile, iv, salt, authtag, return_type} = cipherObject
+      # Assert yael_version is compatible
+      err = incompatibleVersion(yael_version)
+      throw err if err?
+      key = crypto.pbkdf2Sync passphrase, salt, E.ITERATIONS, E.KEY_LENGTH, E.HASH_ALGORITHM
+      decipher = crypto.createDecipheriv E.CIPHER_ALGORITHM, key, iv
+      decipher.setAuthTag authtag
+      try
+        plainfile = Buffer.concat [decipher.update(cipherfile), decipher.final()]
+        plainfile = plainfile.toString('utf8') if return_type is 'String'
+        return plainfile
+      catch err
+        if err.message is "Unsupported state or unable to authenticate data"
+          throw new Error "Message Corrupted"
 
 ## Backwards compatibility logic
 
@@ -186,5 +232,7 @@ Finally, we expose the following functions as the official API:
 
     module.exports =
       encrypt: encrypt
+      encryptSync: encryptSync
       decrypt: decrypt
+      decryptSync: decryptSync
       CipherObject: CipherObject

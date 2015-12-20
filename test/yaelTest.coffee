@@ -44,6 +44,20 @@ describe 'Encryption tests', ->
       global.cipherBufferP = cipherObject
       done()
 
+  it 'encrypt "Hello World!" (Sync)', (done) ->
+    cipherObject = yael.encryptSync "my password", "Hello World!"
+    expect(cipherObject).to.exist
+    expect(cipherObject.return_type).to.equal('String')
+    global.cipherStringS = cipherObject
+    done()
+
+  it 'encrypt buffer (Sync)', (done) ->
+    cipherObject = yael.encryptSync "asdf", plainbuffer
+    expect(cipherObject).to.exist
+    expect(cipherObject.return_type).to.equal('Buffer')
+    global.cipherBufferS = cipherObject
+    done()
+
 describe 'Decryption tests', ->
   it 'decrypt "Hello World!"', (done) ->
     yael.decrypt "my password", cipherString, (err, plainfile) ->
@@ -71,6 +85,18 @@ describe 'Decryption tests', ->
       global.plainbuffer2P = plainbuffer2
       done()
 
+  it 'decrypt "Hello World!" (Sync)', (done) ->
+    plainfile = yael.decryptSync "my password", cipherStringS
+    expect(plainfile).to.exist
+    global.plainfileS = plainfile
+    done()
+
+  it 'decrypt buffer (Sync)', (done) ->
+    plainbuffer2 = yael.decryptSync "asdf", cipherBufferS
+    expect(plainbuffer2).to.exist
+    global.plainbuffer2S = plainbuffer2
+    done()
+
 describe 'Correct output', ->
   it 'decrypted string output matches input', ->
     expect(plainfile).to.equal("Hello World!")
@@ -81,6 +107,11 @@ describe 'Correct output', ->
     expect(plainfileP).to.equal("Hello World!")
   it 'decrypted buffer output matches input (Promise)', ->
     expect(plainbuffer).to.deep.equal(plainbuffer2P)
+
+  it 'decrypted string output matches input (Sync)', ->
+    expect(plainfileS).to.equal("Hello World!")
+  it 'decrypted buffer output matches input (Sync)', ->
+    expect(plainbuffer).to.deep.equal(plainbuffer2S)
 
 describe 'Catch authTag (file integrity) error', ->
   before ->
@@ -102,6 +133,13 @@ describe 'Catch authTag (file integrity) error', ->
     .catch (err) ->
       expect(err).to.deep.equal(new Error "Message Corrupted")
       done()
+  it 'decrypt string (Sync)', (done) ->
+    try
+      yael.decryptSync "my password", cipherString
+    catch e
+      err = e
+    expect(err).to.deep.equal(new Error "Message Corrupted")
+    done()
   after ->
     # Undo manipulation of first byte
     cf = cipherString.cipherfile
@@ -146,6 +184,14 @@ describe 'Catch yael_version mismatch error', ->
     .catch (err) ->
       expect(err).to.deep.equal(new Error "cipherObject cannot be read because cipherObject.yael_version is incompatible with this version of yael")
       done()
+  it 'major version change up (Sync)', (done) ->
+    cipherBuffer.yael_version = 'v2.0.0'
+    try
+      yael.decryptSync "asdf", cipherBuffer
+    catch error
+      err = error
+    expect(err).to.deep.equal(new Error "cipherObject cannot be read because cipherObject.yael_version is incompatible with this version of yael")
+    done()
 
 describe 'Test export formats', ->
   cipOb = null
